@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="text/javascript" src="d3.js"></script>
+    <style type="text/css">
+    h1 {
+      font-family: sans-serif;
+      margin-left: 40px;
+      font-size: 25px;
+    }
+    h2 {
+      font-family: sans-serif;
+      margin-left: 40px;
+      margin-top: -10px;
+      font-size: 15px;
+      font-weight: normal;
+    }
+    div {
+      position: absolute;
+      left: 850px;
+      top: 0px;
+    }
+    </style>
+    <h1>Game-Level Scatterplot Matrix of Selected Statistic</h1>
+    <h2>Points Colored By Season, 2009-2018</h2>
+  </head>
+  <body>
+    <div>
+      <p id = "stat_text" style="font-family: sans-serif; color: black">Select Statistic to Highlight:</p>
+      <input id="slider" type="range" min="0" max="11" value = "0" step = "1">
+    </div>
+    <script type="text/javascript">
+
+    var dataset;
+    var rowConverter = function(d) {
+				return {
+          Season: new Date(+d.Season, 0, 1),
+          stat: d.variable,
+          value: parseFloat(d.value)
+				};
+		}
+
+    d3.csv("game_level.csv", rowConverter, function(data) {
+
+      var dataset = data;
+      console.log(data);
+
+      var nested = d3.nest()
+                     .key(d => d.stat)
+                     .entries(dataset)
+
+      console.log(nested)
+      var keys = nested.map(d => d.key)
+
+      // initialize svg
+      var svg = d3.select("body")
+                  .selectAll("chart")
+                  .data(nested)
+                  .enter()
+                  .append("svg")
+                  .attr("width", 400)
+                  .attr("height", 400)
+                  .append("g")
+                  .attr("transform", "translate(50,50)")
+
+      // scales
+      var xScale = d3.scaleLinear()
+                     .domain(d3.extent(dataset, d => d.value))
+                     .range([0,400])
+
+      var yScale = d3.scaleLinear()
+                     .domain(d3.extent(dataset, d => d.value))
+                     .range([400,0])
+
+      var fillScale = d3.scaleOrdinal()
+                        .domain(d => d.values.Season)
+                        .range(['#f7fbff','#deebf7','#c6dbef','#c6dbef','#9ecae1',
+                                '#6baed6','#4292c6','#2171b5','#08519c','#08306b'])
+
+      var xAxis = d3.axisBottom()
+                    .scale(xScale)
+
+      var yAxis = d3.axisLeft()
+                    .scale(yScale)
+
+      svg.append("g")
+         .call(xAxis)
+         .attr("class", "axis")
+         .attr("transform", "translate(0,330)")
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.append("text")
+         .attr("x", 30)
+         .attr("y", 20)
+         .text(d => d.key)
+         .attr("font-family", "sans-serif")
+
+     //legend
+     var colors = ['#f7fbff','#deebf7','#c6dbef','#c6dbef','#9ecae1',
+                   '#6baed6','#4292c6','#2171b5','#08519c','#08306b']
+
+     d3.select("#slider")
+       .on("change", function() {
+
+         var selected = +d3.select(this).node().value
+         var stat_selected = keys[selected]
+         console.log(selected)
+         console.log(stat_selected)
+
+         data_cx = dataset.filter(x => x.stat == stat_selected)
+         console.log(data_cx[2].value)
+
+         // clear existing plot
+         svg.selectAll("circle").remove()
+
+         //draw the new plots
+         svg.selectAll("circle")
+            .data(d => d.values)
+            .enter()
+            .append("circle")
+            .attr("cx", (d,i) => xScale(data_cx[i].value))
+            .attr("cy", d => yScale(d.value))
+            .attr("r", 3)
+            .attr("fill", (d,i) => fillScale(data_cx[i].Season))
+
+          var stat_text = document.getElementById("stat_text")
+          stat_text.innerHTML = "Statistic Selected: <b>" + stat_selected + "</b>"
+
+          svg.selectAll("text.x").remove()
+
+          svg.append("text")
+             .attr("class", "x")
+             .text(stat_selected)
+             .attr("x", 300)
+             .attr("y", 300)
+             .attr("font-family", "sans-serif")
+
+      });
+
+    });
+
+    </script>
+
+  </body>
+
+</html>

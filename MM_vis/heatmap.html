@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="text/javascript" src="d3.js"></script>
+    <style type="text/css">
+    h1 {
+      font-family: sans-serif;
+      margin-left: 40px;
+      font-size: 25px;
+    }
+    div {
+      position: absolute;
+      left: 1100px;
+    }
+    </style>
+    <h1>Heatmap of Game-Level Differences in Statistics of Winning and Losing NCAA Tournament Teams
+       <br> Over 664 Tournament Games, 2009-2018</h1>
+  </head>
+  <body>
+    <div>
+      <p style="font-family: sans-serif; color: black">Select Statistic to Highlight:</p>
+      <input id="slider" type="range" min="0" max="11" value = "0" step = "1">
+    </div>
+    <script type="text/javascript">
+
+    var dataset;
+    var rowConverter = function(d) {
+				return {
+          Season: parseFloat(d.Season),
+					GameID: parseFloat(d.GameID),
+          stat: d.variable,
+          value: parseFloat(d.value)
+				};
+		}
+
+    d3.csv("game_level.csv", rowConverter, function(data) {
+
+      var dataset = data;
+      var w = 1500;
+      var h = 2000;
+      var padding = 50;
+
+      console.log(data);
+
+      // initialize svg
+      var svg = d3.select("body")
+                  .append("svg")
+                  .attr("width", w)
+                  .attr("height", h);
+
+      // define scale and axes
+      var stats = Array.from((new Set(dataset.map(d => d.stat))))
+      console.log(stats)
+
+      var xScale = d3.scaleOrdinal()
+                     .domain(stats)
+                     .range([50, 130, 210, 290, 370, 450, 530, 610, 690,
+                             770, 850, 930])
+
+      var yScale = d3.scaleLinear()
+                     .domain([d3.min(dataset, d => d.GameID),
+                              d3.max(dataset, d => d.GameID)])
+                     .range([padding, h - padding])
+
+      var fillScale = d3.scaleQuantize()
+                        .domain([d3.min(dataset, d => d.value),
+                                 d3.max(dataset, d => d.value)])
+                        .range(['#b2182b','#d6604d','#f4a582','#fddbc7',
+                                '#f7f7f7','#d1e5f0','#92c5de','#4393c3','#2166ac'])
+
+      var timeScale = d3.scaleOrdinal()
+                        .domain(["2009", "2018"])
+                        .range([1950, 50])
+
+      // draw tiles
+      svg.selectAll("rect")
+			   .data(dataset)
+			   .enter()
+			   .append("rect")
+         .attr("id", "data")
+         .attr("width", 80)
+         .attr("height", (h - padding) / (dataset.length/10))
+			   .attr("x", d => xScale(d.stat))
+			   .attr("y", d => yScale(d.GameID))
+         .attr("fill", d => fillScale(d.value))
+
+     // draw axes + legend
+     svg.selectAll("text")
+        .data(stats)
+        .enter()
+        .append("text")
+        .text(d => d)
+        .attr("x", (d, i) => 80 + 80*i)
+        .attr("y", 40)
+        .attr("font-family", "sans-serif")
+
+
+     var yAxis = d3.axisLeft()
+                   .scale(timeScale)
+
+     svg.append("g")
+        .attr("class", "axis")
+        .attr("transform", "translate(" + padding + ",0)")
+        .call(yAxis);
+
+     var colors = ['#b2182b','#d6604d','#f4a582','#fddbc7',
+                   '#f7f7f7','#d1e5f0','#92c5de','#4393c3','#2166ac']
+
+     svg.selectAll("rect.legend")
+        .data(colors.reverse())
+        .enter()
+        .append("rect")
+        .attr("width", 20)
+        .attr("height", 20)
+        .attr("x", 1100)
+        .attr("y", (d, i) => 100 + 25 * i)
+        .attr("fill", d => d)
+
+    svg.append('text')
+       .text("Largest differential for winning team")
+       .attr("x", 1130)
+       .attr("y", 113)
+       .attr("font-family", "sans-serif")
+
+    svg.append('text')
+       .text("Largest differential for losing team")
+       .attr("x", 1130)
+       .attr("y", 315)
+       .attr("font-family", "sans-serif")
+
+     // statistic selection and highlighting
+     d3.select("#slider")
+       .on("change", function() {
+         var selected = +d3.select(this).node().value
+         var stat = stats[selected]
+         console.log(selected)
+         console.log(stat)
+
+         svg.selectAll("#data")
+            .attr("opacity", "1")
+            .filter(d => d.stat != stat)
+            .attr("opacity", "0.25")
+
+         svg.selectAll("text")
+            .attr("font-weight", "normal")
+            .filter(d => d == stat)
+            .attr("font-weight", "bold")
+       });
+
+    });
+
+    </script>
+
+  </body>
+
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="text/javascript" src="d3.js"></script>
+    <style type="text/css">
+    h1 {
+      font-family: sans-serif;
+      margin-left: 40px;
+      font-size: 25px;
+    }
+    div {
+      position: absolute;
+      left: 1100px;
+    }
+    </style>
+    <h1>Time Series of Average Values by Season in NCAA Tournament Game-Level Statistic Differentials</h1>
+  </head>
+  <body>
+    <div>
+      <p style="font-family: sans-serif; color: black">Select Statistic to Highlight:</p>
+      <input id="slider" type="range" min="0" max="11" value = "0" step = "1">
+    </div>
+    <script type="text/javascript">
+
+    var dataset;
+    var rowConverter = function(d) {
+				return {
+          Season: new Date(+d.Season, 0, 1),
+          stat: d.variable,
+          value: parseFloat(d.value)
+				};
+		}
+
+    d3.csv("averages_melted.csv", rowConverter, function(data) {
+
+      var dataset = data;
+      var w = 1000;
+      var h = 2000;
+      var padding = 50;
+
+      console.log(data);
+
+      var nested = d3.nest()
+                     .key(d => d.stat)
+                     .entries(dataset)
+
+      var keys = nested.map(d => d.key)
+
+      console.log(nested)
+
+      // initialize svg
+      var svg = d3.select("body")
+                  .selectAll("chart")
+                  .data(nested)
+                  .enter()
+                  .append("svg")
+                  .attr("width", 1000)
+                  .attr("height", 150)
+                  .append("g")
+
+      // scales
+      var xScale = d3.scaleTime()
+                     .domain(d3.extent(dataset, d => d.Season))
+                     .range([padding, w - padding])
+
+      var yScale = d3.scaleLinear()
+                     .domain(d3.extent(dataset, d => d.value))
+                     .range([100,0])
+
+      var fillScale = d3.scaleOrdinal()
+                        .domain(nested.map(d => d.key))
+                        .range(["#FF64B0", "#619CFF", "#7CAE00", "#DE8C00",
+                                "#00C08B", "#F564E3", "#C77CFF", "#00B4F0",
+                                "#00BFC4", "#00BA38", "#B79F00", "#F8766D"])
+
+      var xAxis = d3.axisBottom()
+                    .scale(xScale)
+
+      var yAxis = d3.axisLeft()
+                    .scale(yScale)
+
+
+      svg.append("g")
+         .call(xAxis)
+         .attr("class", "axis")
+         .attr("transform", "translate(0,60)")
+
+      svg.append("g")
+         .call(yAxis)
+         .attr("transform", "translate(50,0)")
+
+
+      svg.append("path")
+         .attr("id", "data")
+         .attr("fill", "none")
+         .attr("stroke", "grey")
+         .attr("stroke-width", 4)
+         .attr("d", function(d) {
+            return d3.line()
+                     .x(d => xScale(d.Season))
+                     .y(d => yScale(d.value))
+                   (d.values)
+         })
+
+      svg.append("path")
+         .attr("id", "data")
+         .attr("fill", d => fillScale(d.key))
+         .attr("stroke", "none")
+         .attr("d", function(d) {
+           return d3.area()
+                    .x(d => xScale(d.Season))
+                    .y0(yScale(0))
+                    .y1(d => yScale(d.value))
+                  (d.values)
+         })
+
+      svg.append("text")
+         .attr("x", 900)
+         .attr("y", 110)
+         .text(d => d.key)
+         .attr("font-family", "sans-serif")
+
+       d3.select("#slider")
+         .on("change", function() {
+           var selected = +d3.select(this).node().value
+           var stat = keys[selected]
+           console.log(selected)
+           console.log(stat)
+
+           svg.selectAll("#data")
+              .attr("opacity", "1")
+              .filter(d => d.key != stat)
+              .attr("opacity", "0.25")
+
+           svg.selectAll("text")
+              .attr("font-weight", "normal")
+              .filter(d => d.key == stat)
+              .attr("font-weight", "bold")
+         });
+
+    });
+
+    </script>
+
+  </body>
+
+</html>
